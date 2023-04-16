@@ -25,7 +25,7 @@ public class OpenAIClient
 
     public async Task<TResult?> GenerateData<TResult>(string prefixPrompt)
     {
-        var schema = GetJsonSchema<TResult>();
+        var schema = JsonSchemaState.GetTypeSchema<TResult>();
         var prompt = prefixPrompt + "\n Use the following JSON Schema to capture the output of your message. Please respond only with data, no supplemental text. \n Schema : \n " + schema.ToString();
         var response = await _client.PostAsJsonAsync("https://api.openai.com/v1/chat/completions", 
             new CreateChatCompletion.Request(Model:"gpt-3.5-turbo", Messages: new List<ChatMessage>{
@@ -62,7 +62,4 @@ public class OpenAIClient
         var result = await response.Content.ReadFromJsonAsync<CreateImageFromPrompt.Response>(_deserializerOptions);
         return result?.Data?.FirstOrDefault()?.Url;
     }
-
-    private JSchema GetJsonSchema<T>()
-        => new JSchemaGenerator().Generate(typeof(T));
 }
