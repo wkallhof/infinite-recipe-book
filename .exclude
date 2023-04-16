@@ -1,0 +1,24 @@
+# Folders
+bin/
+obj/
+.vs/
+packages/
+node_modules/
+
+# Files
+*.user
+*.suo
+*.log
+*.bak
+*.cache
+*.ncrunchsolution
+*.swp
+*.tmp
+*.tmp_proj
+
+# Global temporary and output files
+*.log
+*.sw?
+*~
+.DS_Store
+Thumbs.db

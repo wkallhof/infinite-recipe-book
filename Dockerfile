@@ -14,7 +14,7 @@ FROM mcr.microsoft.com/dotnet/aspnet:7.0 AS runtime
 WORKDIR /.
 COPY --from=build /app/out .
 
-ENV ASPNETCORE_URLS http://+:7600
+ENV ASPNETCORE_URLS=http://+:7600 ASPNETCORE_ENVIRONMENT=Development
 EXPOSE 7600
 
 # Change name of dll for your application 

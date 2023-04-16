@@ -8,10 +8,21 @@
         @* PROMPT *@
         <div class="columns is-centered">
             <div class="column is-9">
-                <div class="field has-addons">
+                <div class="field has-addons is-hidden-mobile">
                     <p class="control is-expanded">
                         <input class="input is-medium" type="text" placeholder="A savory salmon dish for dinner, serves 2" @bind-value="Prompt" @bind-value:event="oninput">
                     </p>
+                    <p class="control">
+                        <button class="button is-info is-medium @(IsLoading?"is-loading":"")" @onclick="GenerateRecipes" disabled="@string.IsNullOrWhiteSpace(Prompt)"> Generate </button>
+                    </p>
+                </div>
+
+                <div class="field is-hidden-tablet is-grouped">
+                    <p class="control is-expanded">
+                        <textarea class="textarea" type="text" placeholder="A savory salmon dish for dinner, serves 2" @bind-value="Prompt" @bind-value:event="oninput"></textarea>
+                    </p>
+                </div>
+                <div class="field is-hidden-tablet">
                     <p class="control">
                         <button class="button is-info is-medium @(IsLoading?"is-loading":"")" @onclick="GenerateRecipes" disabled="@string.IsNullOrWhiteSpace(Prompt)"> Generate </button>
                     </p>
