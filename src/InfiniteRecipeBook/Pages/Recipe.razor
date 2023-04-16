@@ -1,0 +1,149 @@
+@page "/recipe/{data}"
+@using Microsoft.AspNetCore.Components
+@using InfiniteRecipeBook.Common
+
+@inject InfiniteRecipeBook.OpenAI.OpenAIClient Client
+
+  <section class="mt-3">
+    <div class="container">
+        <div class="columns is-centered is-vcentered">
+            <div class="column is-4">
+                <h1 class="title is-size-1">@Title</h1>
+                <p class="is-size-4">@ShortDescription</p>
+            </div>
+            <div class="column is-6">
+                <figure class="image is-square">
+                    <img src="@ImageUrl" alt="">
+                </figure>
+            </div>
+        </div>
+    </div>
+  </section>
+
+  <hr>
+
+<section>
+    <div class="container">
+        <div class="columns is-centered is-vcentered">
+            <div class="column is-4">
+                <div class="field has-addons">
+                <p class="control">
+                    <button class="button">
+                        <span class="icon is-small">
+                            <i class="fas fa-heart"></i>
+                        </span>
+                        <span>Save</span>
+                    </button>
+                </p>
+                <p class="control">
+                    <button class="button">
+                        <span class="icon is-small">
+                            <i class="fas fa-share-alt"></i>
+                        </span>
+                        <span>Share</span>
+                    </button>
+                </p>
+                <p class="control">
+                    <button class="button" @onclick="LoadData">
+                        <span class="icon is-small">
+                            <i class="fas fa-blender"></i>
+                        </span>
+                        <span>Remix</span>
+                    </button>
+                </p>
+                </div>
+            </div>
+            <div class="column is-6 content is-size-5">
+                <p>@LongDescription</p>
+            </div>
+        </div>
+    </div>
+</section>
+
+<section class="section">
+    <div class="container">
+        <div class="columns is-centered is-vcentered">
+            <div class="column is-4  is-size-5">
+                <strong>Ingredients:</strong>
+                @if(IsLoading)
+                {
+                    <progress class="progress is-small is-primary" max="100">15%</progress>
+                }
+                else{
+                    <ul>
+                        @foreach(var ingredient in Ingredients)
+                        {
+                            <li>@ingredient</li>
+                        }
+                    </ul>
+                }
+
+            </div>
+            <div class="column is-6 content is-size-5">
+                <strong>Directions:</strong>
+                @if(IsLoading)
+                {
+                    <progress class="progress is-small is-primary" max="100">15%</progress>
+                }
+                else{
+                    <ol>
+                        @foreach(var step in Directions)
+                        {
+                            <li>@step</li>
+                        }
+                    </ol>
+                }
+            </div>
+        </div>
+    </div>
+</section>
+
+
+@code {
+    public string Title { get; set; }
+    public string ShortDescription { get; set; }
+    public string ImageUrl { get; set; }
+
+    public List<string> Ingredients { get; set; } = new List<string>();
+    public List<string> Directions { get; set; } = new List<string>();
+    public string LongDescription { get; set; }
+
+    public bool IsLoading = false;
+
+    [Parameter]
+    public string Data { get; set; }
+
+    protected override void OnInitialized()
+    {
+        // Decode the combined properties using Base64UrlEncoder
+        string decodedProperties = Base64UrlEncoder.Decode(Data);
+
+        // Split the decoded properties using the pipe delimiter
+        string[] splitProperties = decodedProperties.Split('|');
+
+        // Assign the split properties to the appropriate variables
+        Title = splitProperties[0];
+        ShortDescription = splitProperties[1];
+        ImageUrl = splitProperties[2];
+
+        LoadData();
+    }
+
+    private async Task LoadData()
+    {
+        IsLoading = true;
+        var result = await Client.GenerateData<RecipeDetailsQuery>($"Given a recipe title: \"{Title}\" and its short description: \"{ShortDescription}\", generate a list of ingredients, directions, and a long description that matches.");
+        Ingredients = result.Ingredients;
+        Directions = result.Directions;
+        LongDescription = result.LongDescription;
+        IsLoading = false;
+        StateHasChanged();
+    }
+
+    public class RecipeDetailsQuery
+    {
+        public List<string> Ingredients { get; set; } = new List<string>();
+        public List<string> Directions { get; set; } = new List<string>();
+        public string LongDescription { get; set; }
+    }
+}

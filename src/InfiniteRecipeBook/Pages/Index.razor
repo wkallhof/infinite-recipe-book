@@ -1,0 +1,95 @@
+﻿@page "/"
+@using Newtonsoft.Json
+@inject InfiniteRecipeBook.OpenAI.OpenAIClient Client
+
+  <section class="section">
+    <div class="container">
+
+        @* PROMPT *@
+        <div class="columns is-centered">
+            <div class="column is-9">
+                <div class="field has-addons">
+                    <p class="control is-expanded">
+                        <input class="input is-medium" type="text" placeholder="A savory salmon dish for dinner, serves 2" @bind-value="Prompt" @bind-value:event="oninput">
+                    </p>
+                    <p class="control">
+                        <button class="button is-info is-medium @(IsLoading?"is-loading":"")" @onclick="GenerateRecipes" disabled="@string.IsNullOrWhiteSpace(Prompt)"> Generate </button>
+                    </p>
+                </div>
+            </div>
+        </div>
+        
+        @* RESULTS *@
+        <div class="columns is-centered">
+            @foreach(var recipe in Recipes)
+            {
+                <div class="column is-3">
+                    <div class="card">
+                        <div class="card-image">
+                            <figure class="image is-square">
+                                <img src="@recipe.ImageUrl">
+                            </figure>
+                        </div>
+                        <div class="card-content">
+                            <div class="media">
+                                <div class="media-content">
+                                    <p class="title is-4">@recipe.Title</p>
+                                </div>
+                            </div>
+
+                            <div class="content">
+                                @recipe.ShortDescription
+                            </div>
+                        </div>
+                        <footer class="card-footer">
+                            <a href="/recipe/@recipe.Base64Data" class="card-footer-item">View</a>
+                        </footer>
+                    </div>
+                </div>
+            }
+        </div>
+    </div>
+  </section>
+
+@code {
+
+    private List<RecipePreview>? Recipes = new List<RecipePreview>();
+    private string? Prompt { get; set; }
+    private bool IsLoading { get; set; } = false;
+
+    private async Task GenerateRecipes()
+    {
+        IsLoading = true;
+        Recipes = (await Client.GenerateData<List<RecipePreview>>("Generate 3 recipes using the following prompt: "+Prompt))?.Take(3).ToList();
+        
+        await Task.WhenAll(Recipes.Select(x => LoadImage(x)));
+
+        StateHasChanged();
+        IsLoading = false;
+    }
+
+    private async Task LoadImage(RecipePreview recipe)
+    {
+        recipe.ImageUrl = await Client.GetImageFromPrompt($"Mouth watering, pulled back product image of {recipe.Title} - {recipe.ShortDescription}");
+    }
+
+    public class Recipe
+    {
+        public string Title { get; set; }
+        public string Description { get; set; }
+        public List<string> Ingredients { get; set; } = new List<string>();
+        public List<string> Steps { get; set; } = new List<string>();
+    }
+
+    public class RecipePreview
+    {
+        public string Title { get; set; }
+        public string ShortDescription { get; set; }
+
+        [JsonIgnore]
+        public string ImageUrl { get; set; }
+
+        [JsonIgnore]
+        public string Base64Data => Base64UrlEncoder.Encode($"{Title}|{ShortDescription}|{ImageUrl}");
+    }
+}
