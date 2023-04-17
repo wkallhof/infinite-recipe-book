@@ -1,3 +1,5 @@
+using System.Text.Json.Serialization;
+
 namespace InfiniteRecipeBook.OpenAI.Models
 {
     public class CreateImageFromPrompt
@@ -7,7 +9,8 @@ namespace InfiniteRecipeBook.OpenAI.Models
             public List<ResponseData> Data { get; set; } = new List<ResponseData>();
             public class ResponseData
             {
-                public string Url { get; set; }
+                [JsonPropertyName("b64_json")]
+                public string B64Json { get; set; }
             }
         }
     }

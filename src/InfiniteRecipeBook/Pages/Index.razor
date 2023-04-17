@@ -1,6 +1,8 @@
 ﻿@page "/"
 @using Newtonsoft.Json
+@using InfiniteRecipeBook.Persistence
 @inject InfiniteRecipeBook.OpenAI.OpenAIClient Client
+@inject RecipeRepository RecipeRepository
 
   <section class="section">
     <div class="container">
@@ -38,7 +40,7 @@
                     <div class="card">
                         <div class="card-image">
                             <figure class="image is-square">
-                                <img src="@recipe.ImageUrl">
+                                <img src="data:image/png;base64,@recipe.Base64Image">
                             </figure>
                         </div>
                         <div class="card-content">
@@ -53,7 +55,40 @@
                             </div>
                         </div>
                         <footer class="card-footer">
-                            <a href="/recipe/@recipe.Base64Data" class="card-footer-item">View</a>
+                            <a href="/recipe/@recipe.Id" class="card-footer-item">View</a>
+                        </footer>
+                    </div>
+                </div>
+            }
+        </div>
+    </div>
+  </section>
+
+  <section class="section">
+    <div class="container">
+
+        <h2 class="title is-3">From the Community</h2>
+        
+        @* RESULTS *@
+        <div class="columns is-centered is-multiline">
+            @foreach(var recipe in CommunityRecipes)
+            {
+                <div class="column is-3">
+                    <div class="card">
+                        <div class="card-image">
+                            <figure class="image is-square">
+                                <img src="data:image/png;base64,@recipe.Base64Image">
+                            </figure>
+                        </div>
+                        <div class="card-content">
+                            <div class="media">
+                                <div class="media-content">
+                                    <p class="title is-4">@recipe.Title</p>
+                                </div>
+                            </div>
+                        </div>
+                        <footer class="card-footer">
+                            <a href="/recipe/@recipe.Id" class="card-footer-item">View</a>
                         </footer>
                     </div>
                 </div>
@@ -68,12 +103,20 @@
     private string? Prompt { get; set; }
     private bool IsLoading { get; set; } = false;
 
+    private List<RecipeRecord> CommunityRecipes = new List<RecipeRecord>();
+
+    protected override void OnInitialized()
+    {
+        CommunityRecipes = RecipeRepository.GetAll().OrderBy(x => new Guid()).Take(8).ToList();
+    }
+
     private async Task GenerateRecipes()
     {
         IsLoading = true;
         Recipes = (await Client.GenerateData<List<RecipePreview>>("Generate 3 recipes using the following prompt: "+Prompt))?.Take(3).ToList();
-        
+
         await Task.WhenAll(Recipes.Select(x => LoadImage(x)));
+        Recipes.ForEach(x => PersistRecipe(x));
 
         StateHasChanged();
         IsLoading = false;
@@ -81,15 +124,17 @@
 
     private async Task LoadImage(RecipePreview recipe)
     {
-        recipe.ImageUrl = await Client.GetImageFromPrompt($"Mouth watering, pulled back product image of {recipe.Title} - {recipe.ShortDescription}");
+        recipe.Base64Image = await Client.GetImageFromPrompt($"Mouth watering, pulled back product image of {recipe.Title} - {recipe.ShortDescription}");
     }
 
-    public class Recipe
+    private void PersistRecipe(RecipePreview recipe)
     {
-        public string Title { get; set; }
-        public string Description { get; set; }
-        public List<string> Ingredients { get; set; } = new List<string>();
-        public List<string> Steps { get; set; } = new List<string>();
+        recipe.Id = RecipeRepository.Insert(new RecipeRecord()
+            {
+                Title = recipe.Title,
+                ShortDescription = recipe.ShortDescription,
+                Base64Image = recipe.Base64Image
+            });
     }
 
     public class RecipePreview
@@ -98,9 +143,9 @@
         public string ShortDescription { get; set; }
 
         [JsonIgnore]
-        public string ImageUrl { get; set; }
+        public string Base64Image { get; set; }
 
         [JsonIgnore]
-        public string Base64Data => Base64UrlEncoder.Encode($"{Title}|{ShortDescription}|{ImageUrl}");
+        public Guid Id { get; set; }
     }
 }

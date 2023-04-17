@@ -4,6 +4,7 @@ obj/
 .vs/
 packages/
 node_modules/
+*.db
 
 # Files
 *.user

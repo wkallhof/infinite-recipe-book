@@ -4,7 +4,6 @@ using InfiniteRecipeBook.OpenAI.Models;
 using Microsoft.Extensions.Options;
 using Newtonsoft.Json.Linq;
 using Newtonsoft.Json.Schema;
-using Newtonsoft.Json.Schema.Generation;
 
 namespace InfiniteRecipeBook.OpenAI;
 
@@ -54,12 +53,13 @@ public class OpenAIClient
     {
         var response = await _client.PostAsJsonAsync("https://api.openai.com/v1/images/generations", new {
             Prompt = prompt,
-            Size = "512x512"
+            Size = "512x512",
+            response_format = "b64_json"
         });
 
         response.EnsureSuccessStatusCode();
 
         var result = await response.Content.ReadFromJsonAsync<CreateImageFromPrompt.Response>(_deserializerOptions);
-        return result?.Data?.FirstOrDefault()?.Url;
+        return result?.Data?.FirstOrDefault()?.B64Json;
     }
 }

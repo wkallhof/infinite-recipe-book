@@ -1,19 +1,21 @@
-@page "/recipe/{data}"
+@page "/recipe/{id:guid}"
 @using Microsoft.AspNetCore.Components
 @using InfiniteRecipeBook.Common
 
+@using InfiniteRecipeBook.Persistence
 @inject InfiniteRecipeBook.OpenAI.OpenAIClient Client
+@inject RecipeRepository RecipeRepository
 
   <section class="mt-3">
     <div class="container">
         <div class="columns is-centered is-vcentered">
             <div class="column is-4">
-                <h1 class="title is-size-1">@Title</h1>
-                <p class="is-size-4">@ShortDescription</p>
+                <h1 class="title is-size-1">@RecipeModel.Title</h1>
+                <p class="is-size-4">@RecipeModel.ShortDescription</p>
             </div>
             <div class="column is-6">
                 <figure class="image is-square">
-                    <img src="@ImageUrl" alt="">
+                    <img src="data:image/png;base64,@RecipeModel.Base64Image">
                 </figure>
             </div>
         </div>
@@ -54,7 +56,7 @@
                 </div>
             </div>
             <div class="column is-6 content is-size-5">
-                <p>@LongDescription</p>
+                <p>@RecipeModel.LongDescription</p>
             </div>
         </div>
     </div>
@@ -71,7 +73,7 @@
                 }
                 else{
                     <ul>
-                        @foreach(var ingredient in Ingredients)
+                        @foreach(var ingredient in RecipeModel.Ingredients)
                         {
                             <li>@ingredient</li>
                         }
@@ -87,7 +89,7 @@
                 }
                 else{
                     <ol>
-                        @foreach(var step in Directions)
+                        @foreach(var step in RecipeModel.Directions)
                         {
                             <li>@step</li>
                         }
@@ -100,42 +102,33 @@
 
 
 @code {
-    public string Title { get; set; }
-    public string ShortDescription { get; set; }
-    public string ImageUrl { get; set; }
-
-    public List<string> Ingredients { get; set; } = new List<string>();
-    public List<string> Directions { get; set; } = new List<string>();
-    public string LongDescription { get; set; }
-
+    public RecipeRecord RecipeModel { get; set; }
     public bool IsLoading = false;
 
     [Parameter]
-    public string Data { get; set; }
+    public Guid Id { get; set; }
 
     protected override void OnInitialized()
     {
-        // Decode the combined properties using Base64UrlEncoder
-        string decodedProperties = Base64UrlEncoder.Decode(Data);
+        RecipeModel = RecipeRepository.Get(Id);
 
-        // Split the decoded properties using the pipe delimiter
-        string[] splitProperties = decodedProperties.Split('|');
-
-        // Assign the split properties to the appropriate variables
-        Title = splitProperties[0];
-        ShortDescription = splitProperties[1];
-        ImageUrl = splitProperties[2];
-
-        LoadData();
+        if (RecipeModel.LongDescription == null || !RecipeModel.Ingredients.Any() || !RecipeModel.Directions.Any())
+        {
+            LoadData();
+        }
+        else{
+            IsLoading = false;
+        }
     }
 
     private async Task LoadData()
     {
         IsLoading = true;
-        var result = await Client.GenerateData<RecipeDetailsQuery>($"Given a recipe title: \"{Title}\" and its short description: \"{ShortDescription}\", generate a list of ingredients, directions, and a long description that matches.");
-        Ingredients = result.Ingredients;
-        Directions = result.Directions;
-        LongDescription = result.LongDescription;
+        var result = await Client.GenerateData<RecipeDetailsQuery>($"Given a recipe title: \"{RecipeModel.Title}\" and its short description: \"{RecipeModel.ShortDescription}\", generate a list of ingredients, directions, and a long description that matches.");
+        RecipeModel.Ingredients = result.Ingredients;
+        RecipeModel.Directions = result.Directions;
+        RecipeModel.LongDescription = result.LongDescription;
+        RecipeRepository.Update(RecipeModel);
         IsLoading = false;
         StateHasChanged();
     }
