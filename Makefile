@@ -11,7 +11,7 @@ docker-build:
 	docker build -t recipes .
 
 docker-run:
-	docker run --rm -p 7600:7600 recipes
+	docker run --rm -p 7600:7600 -v "$(shell pwd)"/data:/data recipes
 
 connect:
 	ssh -i ~/.ssh/digitalOcean_id_rsa system@164.90.149.20
